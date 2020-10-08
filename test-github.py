@@ -1,4 +1,8 @@
 from github import Github
+from git import Repo
+import json
+
+
 
 
 
@@ -6,7 +10,11 @@ from github import Github
 g = Github("ac7ef5dd174e79a594bf23616b3efd7570e1f047")
 
 for repo in g.get_user().get_repos():
-    print(repo.name)
-    repo.edit(has_wiki=False)
-    # to see all the available attributes and methods
-    print(dir(repo))
+   print(repo.name)
+  
+#get settings from governance-root
+#check out all observed repos
+#Find all observed files
+#compare with governed files
+#create pull requests for changes
+    #delete any existing pull requests for same file
