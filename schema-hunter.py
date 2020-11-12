@@ -5,6 +5,9 @@ import json
 import tempfile
 import glob
 import filecmp 
+from shutil import copy
+import time
+
 
 config = None
 
@@ -26,6 +29,7 @@ def huntRepo(repo):
 
       existingPullRequest = FindPullRequest(repo, schemaRepo)
 
+
       if(existingPullRequest is None):
         #compare to main branch and create branch and pull request only if found changes
 
@@ -46,10 +50,44 @@ def huntRepo(repo):
 
       for cng in changes:
         print(cng)
-      #files = glob.glob(workingDir + '/**/*.*', recursive=True)
 
-      #print(files)
-      #repo_schema.create_pull(title=("[" +  repo["name"]+ "]"), body= "test", head="Risk-1111202",base="main")
+
+      files = glob.glob(workingDir + '/**/*.*', recursive=True)
+
+      print(files)
+
+      if changes:
+        if(existingPullRequest is None):
+          schemaLocalRepo = Repo(workingDir + "/governance")
+
+          bName=repo["name"] + '-' + str(int(time.time()))
+          
+          current = schemaLocalRepo.create_head(bName)
+          current.checkout()
+          
+
+          ApplyChanges(changes)
+ 
+          schemaLocalRepo.git.add(A=True)
+          schemaLocalRepo.git.commit(m='msg')
+          schemaLocalRepo.git.push('--set-upstream', 'origin', current)
+
+          schemaRepo.create_pull(title=("[" +  repo["name"]+ "] Schema Changes"), body= ("Changes to schema files were detected in " + repo["url"] + " branch=" + repo["branch"]), head=bName,base="main")
+        else:
+          ApplyChanges(changes)
+          schemaLocalRepo = Repo(workingDir + "/governance")
+          schemaLocalRepo.git.add(A=True)
+          schemaLocalRepo.git.commit(m='msg') # add good message
+          schemaLocalRepo.git.push()
+      else:
+        print("no changes")
+
+def ApplyChanges(changes):
+  for c in changes:
+    dstfolder = os.path.dirname(c["mapping"]["destination"])
+    if not os.path.exists(dstfolder):
+      os.makedirs(dstfolder)
+    copy(c["mapping"]["source"], c["mapping"]["destination"])
 
 def CalculateChanges(mappings):
   changes = []
