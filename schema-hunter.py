@@ -29,7 +29,6 @@ def huntRepo(repo):
 
       existingPullRequest = FindPullRequest(repo, schemaRepo)
 
-
       if(existingPullRequest is None):
         #compare to main branch and create branch and pull request only if found changes
 
@@ -47,14 +46,6 @@ def huntRepo(repo):
       print(mappings)
 
       changes = CalculateChanges(mappings)
-
-      for cng in changes:
-        print(cng)
-
-
-      files = glob.glob(workingDir + '/**/*.*', recursive=True)
-
-      print(files)
 
       if changes:
         if(existingPullRequest is None):
@@ -117,12 +108,12 @@ def Clone(workDir, name, url, branch):
 def FindPullRequest(repo, repo_schema):
   targetPullRequest = None
   for p in repo_schema.get_pulls(state='open', base='main'):
-    if( IsPullOurPullRequest(repo,p)):
+    if( IsOwnedPullRequest(repo,p)):
       targetPullRequest=p
       break
   return targetPullRequest
     
-def IsPullOurPullRequest(repo, pr):
+def IsOwnedPullRequest(repo, pr):
   if(str.startswith(pr.title, ("[" +  repo["name"]+ "]"))):
     return True
   else:
