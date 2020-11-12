@@ -22,7 +22,7 @@ schemaRepo = g.get_repo(schemaRepoUrl) #reference to remote schemarepo
 
 config = json.loads(urllib.request.urlopen(os.environ.get('CONFIG_URL')).read()) #load configuration file
 
-def huntRepo(repo):
+def HuntRepo(repo):
   with tempfile.TemporaryDirectory() as workingDir: #create a temporary working folder to do checkouts
       
       print(repo["name"] + ":cloning source from: " +  repo["url"])
@@ -50,7 +50,7 @@ def huntRepo(repo):
          
         print(repo["name"] + ":found changes: " + str(changes.count))
 
-        if(existingPullRequest is None):
+        if(existingPullRequest is None): #adding changes to new branch/pull request
 
           schemaLocalRepo = Repo(workingDir + "/governance")
 
@@ -67,7 +67,7 @@ def huntRepo(repo):
           schemaLocalRepo.git.push('--set-upstream', 'origin', current)
 
           schemaRepo.create_pull(title=("[" +  repo["name"]+ "] Schema Changes"), body= ("Changes to schema files were detected in " + repo["url"] + " branch=" + repo["branch"]), head=bName,base="main")
-        else:
+        else: # adding changes to existing branch/pull request
           ApplyChanges(changes)
           schemaLocalRepo = Repo(workingDir + "/governance")
           schemaLocalRepo.git.add(A=True)
@@ -84,7 +84,7 @@ def ApplyChanges(changes):
       os.makedirs(dstfolder)
     copy(c["mapping"]["source"], c["mapping"]["destination"])
 
-#compares files pointed to by mapping
+#compares files pointed to by mappings
 def CalculateChanges(mappings):
   changes = []
   for m in mappings:
@@ -97,7 +97,7 @@ def CalculateChanges(mappings):
       changes.append(dict(mapping=m, changeType='add'))
   return changes
 
-#locates files in cloned out source repo according to Unix expansion rules and maps them to files in governance cloned repo
+#locates files in cloned out source repo according to Unix file system expansion rules and maps them to files in governance cloned repo
 def GetFileMappings(source, dest, repo):
   mappings=[]
   for fs in repo["fileSets"]:
@@ -130,10 +130,10 @@ def IsOwnedPullRequest(repo, pr):
     
 errorCount = 0
 
-for tRepo in config["trackedRepos"]:
+for tRepo in config["trackedRepos"]: #hunt each repo in configuration file one-by-one
   try:
     print("starting to process " + tRepo["name"])
-    huntRepo(tRepo)
+    HuntRepo(tRepo)
   except Exception as e:
     print ( tRepo["name"] + ':' + e.__doc__)
     print ( tRepo["name"] + ':' + e.message)
