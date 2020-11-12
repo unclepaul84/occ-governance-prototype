@@ -7,6 +7,7 @@ import glob
 import filecmp 
 from shutil import copy
 import time
+import urllib.request
 
 
 config = None
@@ -15,52 +16,54 @@ gitHubToken = os.environ.get('GITHUB_TOKEN')
 gitHubDomain = os.environ.get('GITHUB_DOMAIN')
 schemaRepoUrl = os.environ.get('SCHEMA_REPO')
 
-g = Github(gitHubToken)
+g = Github(gitHubToken) #gihub api root object
 
-schemaRepo = g.get_repo(schemaRepoUrl)
+schemaRepo = g.get_repo(schemaRepoUrl) #reference to remote schemarepo
 
-with open('config.json') as f:
-  config = json.load(f)
+config = json.loads(urllib.request.urlopen(os.environ.get('CONFIG_URL')).read()) #load configuration file
 
 def huntRepo(repo):
-  with tempfile.TemporaryDirectory() as workingDir:
-       
-      Clone(workingDir,"source", repo["url"],repo["branch"])
+  with tempfile.TemporaryDirectory() as workingDir: #create a temporary working folder to do checkouts
+      
+      print(repo["name"] + ":cloning source from: " +  repo["url"])
+             
+      Clone(workingDir,"source", repo["url"],repo["branch"]) #clone github repo being "hunted"
 
-      existingPullRequest = FindPullRequest(repo, schemaRepo)
+      existingPullRequest = FindPullRequest(repo, schemaRepo) #check if there is a pull request in governance repo from this repo 
 
       if(existingPullRequest is None):
-        #compare to main branch and create branch and pull request only if found changes
 
-        print('comparing to main branch')
+        print(repo["name"] + ":comparing to main branch")
         
         Clone(workingDir, "governance", schemaRepoUrl, "main")
 
       else:
-        print("comparing to existing branch:" + str(existingPullRequest.head.ref))
+        print(repo["name"] + ":comparing to existing branch:" + str(existingPullRequest.head.ref))
 
         Clone(workingDir, "governance", schemaRepoUrl, existingPullRequest.head.ref)
 
       mappings = GetFileMappings(workingDir + "/source", workingDir + "/governance", repo)
 
-      print(mappings)
-
       changes = CalculateChanges(mappings)
 
       if changes:
+         
+        print(repo["name"] + ":found changes: " + str(changes.count))
+
         if(existingPullRequest is None):
+
           schemaLocalRepo = Repo(workingDir + "/governance")
 
           bName=repo["name"] + '-' + str(int(time.time()))
           
           current = schemaLocalRepo.create_head(bName)
-          current.checkout()
-          
+
+          current.checkout()   
 
           ApplyChanges(changes)
  
           schemaLocalRepo.git.add(A=True)
-          schemaLocalRepo.git.commit(m='msg')
+          schemaLocalRepo.git.commit(m='Schema changes from ' + repo["name"])
           schemaLocalRepo.git.push('--set-upstream', 'origin', current)
 
           schemaRepo.create_pull(title=("[" +  repo["name"]+ "] Schema Changes"), body= ("Changes to schema files were detected in " + repo["url"] + " branch=" + repo["branch"]), head=bName,base="main")
@@ -68,11 +71,12 @@ def huntRepo(repo):
           ApplyChanges(changes)
           schemaLocalRepo = Repo(workingDir + "/governance")
           schemaLocalRepo.git.add(A=True)
-          schemaLocalRepo.git.commit(m='msg') # add good message
+          schemaLocalRepo.git.commit(m='Schema changes from ' + repo["name"])
           schemaLocalRepo.git.push()
       else:
-        print("no changes")
+        print(repo["name"] + ":no changes")
 
+#copies files from cloned source repo to cloned governance repo BRANCH
 def ApplyChanges(changes):
   for c in changes:
     dstfolder = os.path.dirname(c["mapping"]["destination"])
@@ -80,6 +84,7 @@ def ApplyChanges(changes):
       os.makedirs(dstfolder)
     copy(c["mapping"]["source"], c["mapping"]["destination"])
 
+#compares files pointed to by mapping
 def CalculateChanges(mappings):
   changes = []
   for m in mappings:
@@ -92,6 +97,7 @@ def CalculateChanges(mappings):
       changes.append(dict(mapping=m, changeType='add'))
   return changes
 
+#locates files in cloned out source repo according to Unix expansion rules and maps them to files in governance cloned repo
 def GetFileMappings(source, dest, repo):
   mappings=[]
   for fs in repo["fileSets"]:
@@ -101,10 +107,12 @@ def GetFileMappings(source, dest, repo):
       mappings.append(mapping)
   return mappings
 
+#clones git repo branch into a specified path using a given token
 def Clone(workDir, name, url, branch):
   cloneUrl="https://" + gitHubToken +"@" + gitHubDomain + "/" + url     
   return Repo.clone_from(url = cloneUrl, to_path = workDir  + "/" + name,branch=branch)
 
+#locates an existing pullrequest from a give source repo
 def FindPullRequest(repo, repo_schema):
   targetPullRequest = None
   for p in repo_schema.get_pulls(state='open', base='main'):
@@ -113,13 +121,23 @@ def FindPullRequest(repo, repo_schema):
       break
   return targetPullRequest
     
+#checks if a given pull request is for a given source repo   
 def IsOwnedPullRequest(repo, pr):
   if(str.startswith(pr.title, ("[" +  repo["name"]+ "]"))):
     return True
   else:
     return False
     
+errorCount = 0
 
 for tRepo in config["trackedRepos"]:
-  huntRepo(tRepo)
+  try:
+    print("starting to process " + tRepo["name"])
+    huntRepo(tRepo)
+  except Exception as e:
+    print ( tRepo["name"] + ':' + e.__doc__)
+    print ( tRepo["name"] + ':' + e.message)
+    errorCount=errorCount+1
 
+if errorCount > 0:
+  raise Exception("Errors were encountered while processing. Not all repos were checked. See above for details")
