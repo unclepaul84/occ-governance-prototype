@@ -1,0 +1,21 @@
+{
+    "trackedRepos":[
+        {
+            "name":"Risk",
+            "url":"unclepaul84/occ-messaging-pillar1",
+            "branch":"main",
+            "fileSets": [
+                {
+                    "name": "Protos",
+                    "source": "/**/*.proto",
+                    "dest": "/pillar1/proto"
+                },
+                {
+                    "name": "Open Apis",
+                    "source": "/**/*.yaml",
+                    "dest": "/pillar1/open-api"
+                }
+            ]
+        }
+    ]
+}
