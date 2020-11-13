@@ -12,8 +12,8 @@ import urllib.request
 
 config = None
 
-gitHubToken = os.environ.get('GITHUB_TOKEN')
-gitHubDomain = os.environ.get('GITHUB_DOMAIN')
+gitHubToken = os.environ.get('GIT_HUB_TOKEN')
+gitHubDomain = os.environ.get('GIT_HUB_DOMAIN')
 schemaRepoUrl = os.environ.get('SCHEMA_REPO')
 
 g = Github(gitHubToken) #gihub api root object
