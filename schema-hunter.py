@@ -10,18 +10,15 @@ import time
 import urllib.request
 
 
-config = None
-
-gitHubToken = os.environ.get('GIT_HUB_TOKEN')
-gitHubDomain = os.environ.get('GIT_HUB_DOMAIN')
-schemaRepoUrl = os.environ.get('SCHEMA_REPO')
-schemaRepoBaseBranch = os.environ.get('SCHEMA_REPO_BASE_BRANCH')
-
-g = Github(gitHubToken) #gihub api root object
-
-schemaRepo = g.get_repo(schemaRepoUrl) #reference to remote schemarepo
-
-config = json.loads(urllib.request.urlopen(os.environ.get('CONFIG_URL')).read()) #load configuration file
+def GetEnvVar(name, defaultValue = None):
+  val = os.environ.get(name)
+  if(val is None):
+    if(defaultValue is None):
+       raise Exception(name + " is required")
+    else:
+      return defaultValue
+  else:
+    return val
 
 def HuntRepo(repo):
   with tempfile.TemporaryDirectory() as workingDir: #create a temporary working folder to do checkouts
@@ -128,7 +125,20 @@ def IsOwnedPullRequest(repo, pr):
     return True
   else:
     return False
-    
+
+config = None
+
+gitHubToken = GetEnvVar('GIT_HUB_TOKEN')
+gitHubDomain = GetEnvVar('GIT_HUB_DOMAIN')
+schemaRepoUrl = GetEnvVar('SCHEMA_REPO')
+schemaRepoBaseBranch = GetEnvVar('SCHEMA_REPO_BASE_BRANCH', 'main')
+
+g = Github(gitHubToken) #gihub api root object
+
+schemaRepo = g.get_repo(schemaRepoUrl) #reference to remote schemarepo
+
+config = json.loads(urllib.request.urlopen(os.environ.get('CONFIG_URL')).read()) #load configuration file
+
 errorCount = 0
 
 for tRepo in config["trackedRepos"]: #hunt each repo in configuration file one-by-one
