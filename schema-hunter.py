@@ -48,7 +48,7 @@ def HuntRepo(repo):
 
       if changes:
          
-        print(repo["name"] + ":found changes: " + str(changes.count()))
+        print(repo["name"] + ":found changes: " + str(len(changes)))
 
         if(existingPullRequest is None): #adding changes to new branch/pull request
 
