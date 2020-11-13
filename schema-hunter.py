@@ -147,7 +147,6 @@ for tRepo in config["trackedRepos"]: #hunt each repo in configuration file one-b
     HuntRepo(tRepo)
   except Exception as e:
     print ( tRepo["name"] + ':' + e.__doc__)
-    print ( tRepo["name"] + ':' + e.message)
     errorCount=errorCount+1
 
 if errorCount > 0:
