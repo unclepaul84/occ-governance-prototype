@@ -15,6 +15,7 @@ config = None
 gitHubToken = os.environ.get('GIT_HUB_TOKEN')
 gitHubDomain = os.environ.get('GIT_HUB_DOMAIN')
 schemaRepoUrl = os.environ.get('SCHEMA_REPO')
+schemaRepoBaseBranch = os.environ.get('SCHEMA_REPO_BASE_BRANCH')
 
 g = Github(gitHubToken) #gihub api root object
 
@@ -35,7 +36,7 @@ def HuntRepo(repo):
 
         print(repo["name"] + ":comparing to main branch")
         
-        Clone(workingDir, "governance", schemaRepoUrl, "main")
+        Clone(workingDir, "governance", schemaRepoUrl, schemaRepoBaseBranch)
 
       else:
         print(repo["name"] + ":comparing to existing branch:" + str(existingPullRequest.head.ref))
@@ -66,7 +67,7 @@ def HuntRepo(repo):
           schemaLocalRepo.git.commit(m='Schema changes from ' + repo["name"])
           schemaLocalRepo.git.push('--set-upstream', 'origin', current)
 
-          schemaRepo.create_pull(title=("[" +  repo["name"]+ "] Schema Changes"), body= ("Changes to schema files were detected in " + repo["url"] + " branch=" + repo["branch"]), head=bName,base="main")
+          schemaRepo.create_pull(title=("[" +  repo["name"]+ "] Schema Changes"), body= ("Changes to schema files were detected in " + repo["url"] + " branch=" + repo["branch"]), head=bName,base=schemaRepoBaseBranch)
         else: # adding changes to existing branch/pull request
           ApplyChanges(changes)
           schemaLocalRepo = Repo(workingDir + "/governance")
